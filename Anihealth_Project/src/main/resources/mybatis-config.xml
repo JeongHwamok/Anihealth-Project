@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	
+	<settings>
+		<setting name="jdbcTypeForNull" value="NULL" />
+	</settings>
+	
+	<typeAliases>
+		<!-- 
+		<typeAlias type="com.kh.spring.board.model.vo.Board" alias="board" />
+		<typeAlias type="com.kh.spring.board.model.vo.Reply" alias="reply" />
+		 -->
+		 <typeAlias type="com.kh.aniht.member.model.vo.Member" alias="member" />
+		 <typeAlias type="com.kh.aniht.question.model.vo.Question" alias="faq" />
+		 <typeAlias type="com.kh.aniht.review.model.vo.Review" alias="review" />
+		 <typeAlias type="com.kh.aniht.magazine.model.vo.Magazine" alias="maga"/>
+		 <typeAlias type="com.kh.aniht.cart.model.vo.Cart" alias="cart"/>
+		 <typeAlias type="com.kh.aniht.order.model.vo.Order" alias="order"/>
+		 <typeAlias type="com.kh.aniht.product.model.vo.Product" alias="product"/>
+		 <typeAlias type="com.kh.aniht.product.model.vo.Effect" alias="effect"/>
+		 <typeAlias type="com.kh.aniht.inquiry.model.vo.Inquiry" alias="inquiry" />
+		 <typeAlias type="com.kh.aniht.order.model.vo.OrderProduct" alias="orderProduct"/>
+		 <typeAlias type="com.kh.aniht.member.model.vo.Delivery" alias="delivery"/>
+		 <typeAlias type="com.kh.aniht.product.model.vo.Wishlist" alias="wishlist" />
+	</typeAliases>
+	
+	<mappers>
+		<!--  
+		<mapper resource="/mappers/board-mapper.xml" />
+		 -->
+		 <mapper resource="/mappers/member-mapper.xml" />
+		 <mapper resource="/mappers/faq-mapper.xml" />
+		 <mapper resource="/mappers/review-mapper.xml" />
+		 <mapper resource="/mappers/maga-mapper.xml"/>
+		 <mapper resource="/mappers/cart-mapper.xml"/>
+		 <mapper resource="/mappers/order-mapper.xml"/>
+		 <mapper resource="/mappers/survey-mapper.xml"/>
+		 <mapper resource="/mappers/product-mapper.xml" />
+		 <mapper resource="/mappers/inquiry-mapper.xml" />
+	</mappers>
+
+
+
+</configuration>

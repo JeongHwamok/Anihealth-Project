@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd" >
+<mapper namespace="magaMapper">
+	
+	<resultMap id="magaResultSet" type="maga">
+		<result column="MAGAZINE_NO" property="magazineNo" />
+		<result column="MAGAZINE_TITLE" property="magazineTitle" />
+		<result column="MAGAZINE_CONTENT" property="magazineContent" />
+		<result column="MAGAZINE_CREATE" property="magazineCreate" />
+		<result column="MAGAZINE_COUNT" property="magazineCount" />
+		<result column="MAGAZINE_STATUS" property="magazineStatus" />
+		<result column="MAGAZINE_PATH" property="magazinePath" />
+		<result column="MAGAZINE_ATTACHMENT_NO" property="magazineAttachmentNo" />
+		<result column="MAGAZINE_IMG_LEVEL" property="magazineImgLevel" />
+		<result column="MAGAZINE_IMG_STATUS" property="magazineImgStatus" />
+	</resultMap>
+	
+	<!-- 매거진 갯수 구하는 쿼리문 해준 -->
+	<select id="selectMagaListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM MAGAZINE
+		WHERE MAGAZINE_STATUS = 'Y'  
+	</select>
+	
+	<!-- 매거진 목록을 구하는 쿼리문 해준 -->
+	<select id="selectMagaList" resultMap="magaResultSet">
+		SELECT MAGAZINE_NO,MAGAZINE_TITLE,TO_CHAR(MAGAZINE_CREATE, 'YYYY-MM-DD') AS "MAGAZINE_CREATE",
+		MAGAZINE_COUNT,MAGAZINE_PATH
+		  FROM MAGAZINE
+          JOIN MAGAZINE_ATTACHMENT USING (MAGAZINE_NO)
+		WHERE MAGAZINE_STATUS = 'Y'
+        AND MAGAZINE_IMG_LEVEL = 1
+		ORDER BY MAGAZINE_CREATE DESC   			
+	</select>
+	<!-- 매거진 조회수를 올리는 쿼리문  해준-->
+	<update id="increaseCount"
+			parameterType="_int">
+		UPDATE MAGAZINE
+		   SET MAGAZINE_COUNT = MAGAZINE_COUNT + 1
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_STATUS = 'Y'
+	</update>
+	
+	<!-- 매거진 상세조회용 쿼리문 해준 -->
+	<select id="selectMagaDeList"
+			parameterType="_int"
+			resultMap="magaResultSet">
+		   SELECT MAGAZINE_NO
+		     , MAGAZINE_TITLE
+		     , TO_CHAR(MAGAZINE_CREATE, 'YYYY-MM-DD') AS "MAGAZINE_CREATE"
+		     , MAGAZINE_COUNT
+		     , MAGAZINE_STATUS
+		  FROM MAGAZINE
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_STATUS = 'Y'
+	</select>
+	
+	<!-- 매거진 상세조회용 이미지내용 쿼리문 해준 -->
+	
+	<select id="selectMagaDeList1"
+			parameterType="_int"
+			resultMap="magaResultSet">
+         SELECT MAGAZINE_ATTACHMENT_NO
+             , MAGAZINE_CONTENT
+		     , MAGAZINE_PATH
+		     , MAGAZINE_IMG_LEVEL
+		     , MAGAZINE_IMG_STATUS
+		  FROM MAGAZINE_ATTACHMENT
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_IMG_STATUS = 'Y'
+	</select>
+	
+	<!-- *********** 정민 : 관리자 ********* -->
+	<!-- 매거진 총 개수 조회용 쿼리문 -->
+	<select id="selectAdMagazineListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM MAGAZINE
+	</select>
+	
+	<!-- 매거진 목록 조회용 쿼리문 -->
+	<select id="selectAdMagazineList" resultMap="magaResultSet">
+		SELECT MAGAZINE_NO
+			 , MAGAZINE_TITLE
+			 , TO_CHAR(MAGAZINE_CREATE, 'YYYY-MM-DD') AS "MAGAZINE_CREATE"
+			 , MAGAZINE_COUNT
+			 , MAGAZINE_PATH
+			 , MAGAZINE_STATUS
+		  FROM MAGAZINE
+          JOIN MAGAZINE_ATTACHMENT USING (MAGAZINE_NO)
+         WHERE MAGAZINE_IMG_LEVEL = 1
+		 ORDER BY MAGAZINE_CREATE DESC  			
+	</select>
+	
+	<!-- 매거진 상세 조회용 쿼리문 -->
+	<select id="selectAdMagazine" parameterType="_int" resultMap="magaResultSet">
+	    SELECT MAGAZINE_NO
+		     , MAGAZINE_TITLE
+		     , TO_CHAR(MAGAZINE_CREATE, 'YYYY-MM-DD') AS "MAGAZINE_CREATE"
+		     , MAGAZINE_COUNT
+		     , MAGAZINE_STATUS
+		  FROM MAGAZINE
+		 WHERE MAGAZINE_NO = #{magazineNo}
+	</select>
+	
+	<!-- 매거진 상세조회를 위한 매거진 이미지들 조회용 쿼리문  -->
+	<select id="selectAdAttachmentList" parameterType="_int" resultMap="magaResultSet">
+        SELECT MAGAZINE_ATTACHMENT_NO
+             , MAGAZINE_CONTENT
+		     , MAGAZINE_PATH
+		     , MAGAZINE_IMG_LEVEL
+		     , MAGAZINE_IMG_STATUS
+		  FROM MAGAZINE_ATTACHMENT
+		 WHERE MAGAZINE_NO = #{magazineNo}
+	</select>
+	
+	<!-- MAGAZINE 테이블 등록용 쿼리문 -->
+	<insert id="insertAdMagazine" parameterType="maga">
+		INSERT INTO MAGAZINE (MAGAZINE_NO
+                            , MAGAZINE_TITLE)
+                      VALUES (SEQ_MAGAZINE_NO.NEXTVAL
+                            , #{magazineTitle})
+	</insert>
+	
+	<!-- MAGAZINE_ATTACHMENT 테이블 등록용 쿼리문 -->
+	<insert id="insertAdAttachment" parameterType="maga">
+        INSERT INTO MAGAZINE_ATTACHMENT ( MAGAZINE_ATTACHMENT_NO
+        								, MAGAZINE_CONTENT
+        								, MAGAZINE_PATH
+        								, MAGAZINE_IMG_LEVEL
+        								, MAGAZINE_NO ) 
+        						 VALUES ( SEQ_MAGAZINE_ATTACHMENT_NO.NEXTVAL
+        						        , #{magazineContent}
+        						        , #{magazinePath}
+        						        , #{magazineImgLevel}
+        						        , SEQ_MAGAZINE_NO.CURRVAL )
+	</insert>
+	
+	<!-- MAGAZINE 테이블 삭제용 쿼리문 -->
+	<update id="deleteAdMagazine" parameterType="_int">
+		UPDATE MAGAZINE
+		   SET MAGAZINE_STATUS = 'N'
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_STATUS = 'Y'
+	</update>
+	
+	<!-- MAGAZINE_ATTACHMENT 테이블 삭제용 쿼리문 -->
+	<update id="deleteAdAttachment" parameterType="_int">
+		UPDATE MAGAZINE_ATTACHMENT
+		   SET MAGAZINE_IMG_STATUS = 'N'
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_IMG_STATUS = 'Y'
+	</update>
+	
+	<!-- MAGAZINE 테이블 복구용 쿼리문 -->
+	<update id="recoverAdMagazine" parameterType="_int">
+		UPDATE MAGAZINE
+		   SET MAGAZINE_STATUS = 'Y'
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_STATUS = 'N'
+	</update>
+	
+	<!-- MAGAZINE_ATTACHMENT 테이블 복구용 쿼리문 -->
+	<update id="recoverAdAttachment" parameterType="_int">
+		UPDATE MAGAZINE_ATTACHMENT
+		   SET MAGAZINE_IMG_STATUS = 'Y'
+		 WHERE MAGAZINE_NO = #{magazineNo}
+		   AND MAGAZINE_IMG_STATUS = 'N'
+	</update>
+	
+	<!-- 기존 매거진 내용 수정용 쿼리문 -->
+	<update id="updateAdMagazine" parameterType="maga">
+		UPDATE MAGAZINE
+	       SET MAGAZINE_TITLE = #{magazineTitle}
+	     WHERE MAGAZINE_NO = #{magazineNo}
+	</update>
+	
+	<!-- 기존 매거진 ATTACHMENT 수정용 쿼리문 -->
+	<update id="updateAdAttachment" parameterType="maga">
+		UPDATE MAGAZINE_ATTACHMENT
+      	   SET MAGAZINE_CONTENT = #{magazineContent}
+      	   	<if test="magazinePath != null">
+      	   		, MAGAZINE_PATH = #{magazinePath}
+	            , MAGAZINE_IMG_LEVEL = #{magazineImgLevel}
+      	   	</if>
+         WHERE MAGAZINE_ATTACHMENT_NO = #{magazineAttachmentNo}
+	</update>
+	
+	<!-- 기존 매거진 ATTACHMENT 등록용 쿼리문-->
+	<insert id="insertAdExistingAttachment" parameterType="maga">
+        INSERT INTO MAGAZINE_ATTACHMENT ( MAGAZINE_ATTACHMENT_NO
+        								, MAGAZINE_CONTENT
+        								, MAGAZINE_PATH
+        								, MAGAZINE_IMG_LEVEL
+        								, MAGAZINE_NO ) 
+        						 VALUES ( SEQ_MAGAZINE_ATTACHMENT_NO.NEXTVAL
+        						        , #{magazineContent}
+        						        , #{magazinePath}
+        						        , #{magazineImgLevel}
+        						        , #{magazineNo} )
+	</insert>
+	<!-- *********** 정민 : 관리자 ********* -->
+</mapper>

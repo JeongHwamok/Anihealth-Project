@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans:beans xmlns="http://www.springframework.org/schema/mvc"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:beans="http://www.springframework.org/schema/beans"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc https://www.springframework.org/schema/mvc/spring-mvc.xsd
+		http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+
+	<!-- DispatcherServlet Context: defines this servlet's request-processing infrastructure -->
+	
+	<!-- Enables the Spring MVC @Controller programming model -->
+	<annotation-driven />
+
+	<!-- Handles HTTP GET requests for /resources/** by efficiently serving up static resources in the ${webappRoot}/resources directory -->
+	<resources mapping="/resources/**" location="/resources/" />
+
+	<!-- Resolves views selected for rendering by @Controllers to .jsp resources in the /WEB-INF/views directory -->
+	<beans:bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<beans:property name="prefix" value="/WEB-INF/views/" />
+		<beans:property name="suffix" value=".jsp" />
+	</beans:bean>
+	
+	<context:component-scan base-package="com.kh.aniht" />
+	
+	
+	<interceptors>
+		<interceptor>
+			<mapping path="/cart.re" />
+			<mapping path="/order.re"/>
+			<mapping path="/myPage.me"/>
+			<mapping path="/list.iq" />
+			<mapping path="/myPageUpdate.me" />			
+			<mapping path="/nickUpdate.me" />			
+			<mapping path="/emailUpdate.me" />			
+			<mapping path="/delete.me" />			
+			<mapping path="/myPageDelivery.me"/>
+			<mapping path="/myPageOrder.me"/>
+			<mapping path="/refund.me"/>
+			<mapping path="/myPageRefund.me"/>
+			<mapping path="/myPageOrderDetail.me"/>
+			<mapping path="/myPageReview.me"/>
+			<mapping path="/myPageWish.me"/>
+			<mapping path="/wishDelete.me"/>
+			<mapping path="/myPageQuestion.me"/>
+			<mapping path="/myPagePassword.me"/>
+			<mapping path="/update.me"/>
+			<mapping path="/checkPwd.me"/>
+			<mapping path="/updatePwd.me"/>
+			<mapping path="/updateDelivery.me"/>
+			<mapping path="/deleteDelivery.me"/>
+			<mapping path="/insertDelivery.me"/>
+			<mapping path="/survey.su"/>
+			<mapping path="/insert.re"/>
+			<mapping path="/updateForm.re"/>
+			<mapping path="/delete.re"/>
+			<mapping path="/enrollForm.iq"/>
+			<mapping path="/updateForm.iq"/>
+			<mapping path="/detail.iq"/>
+			<mapping path="/order.re"/>
+			
+			<beans:bean class="com.kh.aniht.common.interceptor.LoginInterceptor" id="loginInterceptor" />
+		</interceptor>
+		
+		<interceptor>
+			<mapping path="/member.ad" />
+			<mapping path="/product.ad" />
+			<mapping path="/order.ad" />
+			<mapping path="/magazine.ad" />
+			<mapping path="/review.ad" />
+			<mapping path="/faq.ad" />
+			<mapping path="/inquiry.ad" />
+			<mapping path="/detailInquiry.ad" />
+			<mapping path="/detailMaga.ad" />
+			<mapping path="/enrollFormMaga.ad" />
+			<mapping path="/insertInquiry.ad" />
+			<mapping path="/deleteInquiry.ad" />
+			<mapping path="/recoverInquiry.ad" />
+			<mapping path="/countInquiry.ad" />
+			<mapping path="/insertMaga.ad" />
+			<mapping path="/deleteMaga.ad" />
+			<mapping path="/recoverMaga.ad" />
+			<mapping path="/updateFormMaga.ad" />
+			<mapping path="/updateMaga.ad" />
+			<mapping path="/updateFormMember.ad" />
+			<mapping path="/updateMember.ad" />
+			<mapping path="/countMember.ad" />
+			<mapping path="/detailOrder.ad" />
+			<mapping path="/updateDelivery.ad" />
+			<mapping path="/refund.ad" />
+			<mapping path="/detailRefund.ad" />
+			<mapping path="/refundOrder.ad" />
+			<mapping path="/payOrder.ad" />
+			<mapping path="/prepareOrder.ad" />
+			<mapping path="/deliverOrder.ad" />
+			<mapping path="/completeOrder.ad" />
+			<mapping path="/changeStatus.ad" />
+			<mapping path="/countRefund.ad" />
+			<mapping path="/countDelivery.ad" />
+			<mapping path="/selectSales.ad" />
+			<mapping path="/selectTotal.ad" />
+			<mapping path="/detailProduct.ad" />
+			<mapping path="/enrollFormProduct.ad" />
+			<mapping path="/insertProduct.ad" />
+			<mapping path="/updateFormProduct.ad" />
+			<mapping path="/updateProduct.ad" />
+			<mapping path="/deleteProduct.ad" />
+			<mapping path="/rankStock.ad" />
+			<mapping path="/insertFAQ.ad" />
+			<mapping path="/updateFAQ.ad" />
+			<mapping path="/deleteFAQ.ad" />
+			<mapping path="/deleteReview.ad" />
+			<mapping path="/recoverReview.ad" />
+			<mapping path="/selectReview.ad" />
+
+			<beans:bean class="com.kh.aniht.common.interceptor.AdminInterceptor" id="AdminInterceptor" />
+		</interceptor>
+	</interceptors>
+	 
+	 
+	 <!-- 이메일 전송 관련 빈 등록 -->
+	<beans:bean class="org.springframework.mail.javamail.JavaMailSenderImpl" id="mailSender">
+		<beans:property name="host" value="smtp.gmail.com" />
+		<beans:property name="port" value="25" />
+		<beans:property name="username" value="anihealth628@gmail.com" />
+		<beans:property name="password" value="ritrmxfxreepuxjp" />
+		
+		<!-- 
+			email 전송 시 필요한 SMTP 관련 설정값 
+			Properties prop = new Properties();	
+			prop.setProperty("키값", "밸류값");
+		-->
+		<beans:property name="javaMailProperties">
+			<beans:props>
+				<beans:prop key="mail.transport.protocol">smtp</beans:prop>
+				<beans:prop key="mail.smtp.auth">true</beans:prop>
+				<beans:prop key="mail.smtp.starttls.enable">true</beans:prop>
+			</beans:props>
+		</beans:property>
+	</beans:bean>
+	 
+</beans:beans>

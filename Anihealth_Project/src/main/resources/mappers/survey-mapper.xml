@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="surveyMapper">
+	
+	<resultMap type="product" id="productResultSet">
+		<result column="PRODUCT_NO" property="productNo"/>
+		<result column="PRODUCT_NAME" property="productName"/>
+		<result column="PRODUCT_STOCK" property="productStock"/>
+		<result column="PRICE" property="price"/>
+		<result column="CATEGORY" property="category"/>
+		<result column="PRODUCT_THUMBNAIL_PATH" property="productThumbnailPath"/>
+		<result column="PRODUCT_COUNT" property="productCount"/>
+		<result column="TOTAL_WEIGHT" property="totalWeight"/>
+		<result column="TOTAL_COUNT" property="totalCount"/>
+	</resultMap>
+	
+	<resultMap type="effect" id="effectResultSet">
+		<result column="EFFECT_NO" property="effectNo"/>
+		<result column="EFFECT_NAME" property="effectName"/>
+		<result column="EFFECT_FILE_PATH" property="effectFilePath"/>
+	</resultMap>
+	
+	<insert id="insertSurveyResult" parameterType="hashMap">
+		INSERT INTO SURVEY_RESULT VALUES (#{survey.effectWeight}, #{userNo}, #{survey.effectNo})
+	</insert>
+	<!-- category도 나중에 동적으로 받기 -->
+	<select id="surveyResult" resultMap="productResultSet" parameterType="string">
+		SELECT * 
+		  FROM (
+		    SELECT ROWNUM, R.* 
+		      FROM (
+		            SELECT SUM(SR.EFFECT_WEIGHT) TOTAL_WEIGHT, COUNT(EP.EFFECT_NO) TOTAL_COUNT, EP.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, P.PRICE, P.PRODUCT_STOCK
+		            FROM PRODUCT_EFFECT EP
+		            JOIN EFFECT E ON EP.EFFECT_NO = E.EFFECT_NO
+		            JOIN SURVEY_RESULT SR ON E.EFFECT_NO = SR.EFFECT_NO
+		            JOIN PRODUCT P ON EP.PRODUCT_NO = P.PRODUCT_NO
+		            WHERE (P.CATEGORY = #{animal} OR P.CATEGORY = '공통') AND P.PRODUCT_STATUS = 'Y'
+		            GROUP BY EP.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, P.PRICE, P.PRODUCT_STOCK
+		            HAVING COUNT(EP.EFFECT_NO) = 5
+		            ORDER BY TOTAL_WEIGHT DESC, PRODUCT_STOCK DESC
+		            ) R
+		     		WHERE ROWNUM = 1
+		     		
+		     UNION
+		     
+		    SELECT ROWNUM, R.* 
+		      FROM (
+		            SELECT SUM(SR.EFFECT_WEIGHT) TOTAL_WEIGHT, COUNT(EP.EFFECT_NO) TOTAL_COUNT, EP.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, P.PRICE, P.PRODUCT_STOCK
+		            FROM PRODUCT_EFFECT EP
+		            JOIN EFFECT E ON EP.EFFECT_NO = E.EFFECT_NO
+		            JOIN SURVEY_RESULT SR ON E.EFFECT_NO = SR.EFFECT_NO
+		            JOIN PRODUCT P ON EP.PRODUCT_NO = P.PRODUCT_NO
+		            WHERE (P.CATEGORY = #{animal} OR P.CATEGORY = '공통') AND P.PRODUCT_STATUS = 'Y'
+		            GROUP BY EP.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, P.PRICE, P.PRODUCT_STOCK
+		            HAVING COUNT(EP.EFFECT_NO) = 2 OR COUNT(EP.EFFECT_NO) = 3
+		            ORDER BY TOTAL_WEIGHT DESC, PRODUCT_STOCK DESC
+		            ) R
+		     		WHERE ROWNUM BETWEEN 1 AND 2
+		     
+		     UNION
+		     
+		    SELECT ROWNUM, R.* 
+		      FROM (
+		            SELECT SUM(SR.EFFECT_WEIGHT) AS TOTAL_WEIGHT, COUNT(EP.EFFECT_NO) TOTAL_COUNT, EP.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, P.PRICE, P.PRODUCT_STOCK
+		            FROM PRODUCT_EFFECT EP
+		            JOIN EFFECT E ON EP.EFFECT_NO = E.EFFECT_NO
+		            JOIN SURVEY_RESULT SR ON E.EFFECT_NO = SR.EFFECT_NO
+		            JOIN PRODUCT P ON EP.PRODUCT_NO = P.PRODUCT_NO
+		            WHERE P.CATEGORY = #{animal} AND P.PRODUCT_STATUS = 'Y'
+		            GROUP BY EP.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, P.PRICE, P.PRODUCT_STOCK
+		            HAVING COUNT(EP.EFFECT_NO) = 1
+		            ORDER BY TOTAL_WEIGHT DESC, PRODUCT_STOCK DESC
+		           )R
+		     		WHERE ROWNUM BETWEEN 1 AND 3
+			     )
+		ORDER BY TOTAL_COUNT, TOTAL_WEIGHT DESC, PRODUCT_STOCK DESC
+	</select>
+
+	<delete id="deleteSurveyResult" parameterType="_int">
+		DELETE FROM SURVEY_RESULT 
+ 		 WHERE USER_NO = #{userNo}
+	</delete>
+	
+	<select id="selectEffectList" parameterType="_int" resultMap="effectResultSet">
+		SELECT E.EFFECT_NO, EFFECT_NAME, EFFECT_FILE_PATH
+		  FROM EFFECT E
+		  JOIN PRODUCT_EFFECT EP ON (E.EFFECT_NO = EP.EFFECT_NO)
+		 WHERE PRODUCT_NO = #{productNo} 
+	</select>
+
+
+</mapper>

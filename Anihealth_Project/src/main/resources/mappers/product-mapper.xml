@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="productMapper">
+
+    <resultMap id="productResultSet" type="product">
+        <result column="PRODUCT_NO" property="productNo"/>
+        <result column="PRODUCT_NAME" property="productName"/>
+        <result column="PRICE" property="price"/>
+        <result column="CATEGORY" property="category"/>
+        <result column="PRODUCT_THUMBNAIL_PATH" property="productThumbnailPath"/>
+        <result column="PRODUCT_DETAIL_PATH" property="productDetailPath"/>
+        <result column="PRODUCT_COUNT" property="productCount"/>
+        <result column="PRODUCT_STATUS" property="productStatus"/>
+        <result column="PRODUCT_STOCK" property="productStock"/> 
+        <result column="EFFECT_NAME" property="effectName"/>
+        <result column="RATING" property="rating"/>
+        <result column="USER_NO" property="userNo"/>
+        <!-- <result column="EFFECT_NAME" property="effectName"/> --> <!-- 주석 처리된 부분 -->
+        <!-- <result column="RATING" property="r  
+        ating"/> --> <!-- 주석 처리된 부분 -->
+        <!-- 베스트 제품 조회용 - 정민 -->
+        <result column="WISH_COUNT" property="wishCount"/>
+    </resultMap>
+    
+    <resultMap type="effect" id="effectResultSet">
+		<result column="EFFECT_NO" property="effectNo" />
+		<result column="EFFECT_NAME" property="effectName" />
+		<result column="EFFECT_FILE_PATH" property="effectFilePath" />
+	</resultMap>
+
+    <!-- 제품 목록을 조회하는 쿼리 -->
+    <select id="selectProductList" parameterType="map" resultMap="productResultSet">
+        SELECT P.PRODUCT_NO,
+               P.PRODUCT_NAME,
+               P.PRICE,
+               P.CATEGORY,
+               P.PRODUCT_THUMBNAIL_PATH,
+               P.PRODUCT_DETAIL_PATH,
+               P.PRODUCT_COUNT,
+               P.PRODUCT_STATUS
+               <!-- ,E.EFFECT_NAME --> <!-- 주석 처리된 부분 -->
+               <!-- ,NVL(AVG(R.RATING), 0) AS RATING --> <!-- 주석 처리된 부분 -->
+        FROM PRODUCT P
+        <!--
+        LEFT JOIN EFFECT E ON P.PRODUCT_NO = E.EFFECT_NO
+        LEFT JOIN ORDER_PRODUCT OP ON P.PRODUCT_NO = OP.PRODUCT_NO
+        LEFT JOIN REVIEW R ON OP.ORDER_PRODUCT_NO = R.ORDER_PRODUCT_NO
+        -->
+        WHERE P.PRODUCT_STATUS = 'Y'
+        GROUP BY P.PRODUCT_NO, P.PRODUCT_NAME, P.PRICE, P.CATEGORY, P.PRODUCT_THUMBNAIL_PATH, P.PRODUCT_DETAIL_PATH, P.PRODUCT_COUNT, P.PRODUCT_STATUS
+        ORDER BY
+    <choose>
+        <when test="order == 'newest'">
+            P.PRODUCT_NO DESC
+        </when>
+        <when test="order == 'priceDesc'">
+            P.PRICE DESC
+        </when>
+        <when test="order == 'priceAsc'">
+            P.PRICE ASC
+        </when>
+        <otherwise>
+            P.PRODUCT_NO DESC
+        </otherwise>
+    </choose>
+        
+    </select>
+
+    <!-- 검색 조건에 따른 제품 리스트 조회 쿼리 -->
+ <select id="selectFilteredProductList" parameterType="map" resultMap="productResultSet">
+ SELECT P.PRODUCT_NO,
+       P.PRODUCT_NAME,
+       P.PRICE,
+       P.CATEGORY,
+       P.PRODUCT_THUMBNAIL_PATH,
+       P.PRODUCT_DETAIL_PATH,
+       P.PRODUCT_COUNT,
+       P.PRODUCT_STATUS
+       FROM PRODUCT P
+	   JOIN PRODUCT_EFFECT PE ON P.PRODUCT_NO = PE.PRODUCT_NO
+	   JOIN EFFECT E ON PE.EFFECT_NO = E.EFFECT_NO
+		WHERE P.PRODUCT_STATUS = 'Y'
+      <if test="category != null and category != ''">
+          AND P.CATEGORY = #{category}
+      </if>
+      <if test="keyword != null and keyword != ''">
+          AND (P.PRODUCT_NAME LIKE '%' || #{keyword} || '%' OR E.EFFECT_NAME LIKE '%' || #{keyword} || '%')
+      </if>
+    GROUP BY P.PRODUCT_NO, P.PRODUCT_NAME, P.PRICE, P.CATEGORY, P.PRODUCT_THUMBNAIL_PATH, P.PRODUCT_DETAIL_PATH, P.PRODUCT_COUNT, P.PRODUCT_STATUS
+    ORDER BY P.CATEGORY,
+    <choose>
+        <when test="order == 'newest'">
+            P.PRODUCT_NO DESC
+        </when>
+        <when test="order == 'priceDesc'">
+            P.PRICE DESC
+        </when>
+        <when test="order == 'priceAsc'">
+            P.PRICE ASC
+        </when>
+        <otherwise>
+            P.PRODUCT_NO DESC
+        </otherwise>
+    </choose>
+</select>
+
+    <!-- 제품 목록의 개수를 조회하는 쿼리 -->
+    <select id="selectProductListCount" parameterType="map" resultType="int">
+    SELECT COUNT(*)
+    FROM (
+        SELECT DISTINCT P.PRODUCT_NO
+        FROM PRODUCT P
+        JOIN PRODUCT_EFFECT PE ON P.PRODUCT_NO = PE.PRODUCT_NO
+        JOIN EFFECT E ON PE.EFFECT_NO = E.EFFECT_NO
+        WHERE P.PRODUCT_STATUS = 'Y'
+        <if test="category != null and category != ''">
+            AND P.CATEGORY = #{category}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (P.PRODUCT_NAME LIKE '%' || #{keyword} || '%' OR E.EFFECT_NAME LIKE '%' || #{keyword} || '%')
+        </if>
+    ) DISTINCT_PRODUCTS
+</select>
+
+
+ <!-- 제품 상세 정보를 조회하는 쿼리 -->
+    <select id="selectProductDetail" parameterType="_int" resultMap="productResultSet">
+        SELECT DISTINCT P.PRODUCT_NO,
+               P.PRODUCT_NAME,
+               P.PRICE,
+               P.CATEGORY,
+               P.PRODUCT_THUMBNAIL_PATH,
+               P.PRODUCT_DETAIL_PATH,
+               P.PRODUCT_COUNT,
+               P.PRODUCT_STATUS,
+               PRODUCT_STOCK
+   
+               <!-- ,E.EFFECT_NAME -->
+               <!-- ,E.EFFECT_FILE_PATH --> <!-- 주석 처리된 부분 -->
+               <!-- ,NVL(AVG(R.RATING), 0) AS RATING --> <!-- 주석 처리된 부분 -->
+        FROM PRODUCT P
+        LEFT JOIN PRODUCT_EFFECT PE ON(P.PRODUCT_NO = PE.PRODUCT_NO)
+        LEFT JOIN EFFECT E ON(PE.EFFECT_NO = E.EFFECT_NO)
+
+        <!--
+        LEFT JOIN EFFECT E ON P.PRODUCT_NO = E.EFFECT_NO
+        LEFT JOIN ORDER_PRODUCT OP ON P.PRODUCT_NO = OP.PRODUCT_NO
+        LEFT JOIN REVIEW R ON OP.ORDER_PRODUCT_NO = R.ORDER_PRODUCT_NO
+        -->
+        WHERE P.PRODUCT_NO = #{productNo}
+    
+    </select>
+    
+    
+    	<!-- Wishlist 관련 쿼리 -->
+		<insert id="addToWishlist" parameterType="wishlist">
+		    INSERT INTO WISHLIST (PRODUCT_NO, USER_NO)
+		    VALUES (#{productNo}, #{userNo})
+		</insert>
+		
+		<delete id="removeFromWishlist" parameterType="java.util.Map">
+		    DELETE FROM WISHLIST
+		    WHERE PRODUCT_NO = #{productNo} AND USER_NO = #{userNo}
+		</delete>
+		
+		
+		<select id="checkDuplicateWishlist" resultType="int" parameterType="wishlist">
+		    SELECT COUNT(*) 
+		    FROM WISHLIST
+		    WHERE PRODUCT_NO = #{productNo} AND USER_NO = #{userNo}
+		</select>
+		
+		<!-- 위시리스트에 제품이 있는지 여부를 체크하는 쿼리 -->
+		<select id="checkWishlist" resultType="int" parameterType="wishlist">
+		    SELECT COUNT(*) 
+		    FROM WISHLIST
+		    WHERE PRODUCT_NO = #{productNo} AND USER_NO = #{userNo}
+		</select>
+		
+	    <!-- 영양제 효능 조회용 쿼리문 -->
+		<select id="selectEffectsByProductNo" parameterType="_int" resultMap="effectResultSet">
+			SELECT *
+			  FROM EFFECT E
+			  JOIN PRODUCT_EFFECT PE ON (E.EFFECT_NO = PE.EFFECT_NO)
+			 WHERE PRODUCT_NO = #{productNo}
+		</select>
+		
+		<!-- 영양제 부작용 조회용 쿼리문 -->
+		<select id="selectSideEffectsByProductNo" parameterType="_int" resultMap="effectResultSet">
+			SELECT *
+			  FROM SIDE_EFFECT SE
+			  JOIN EFFECT E ON (SE.EFFECT_NO = E.EFFECT_NO)
+			 WHERE PRODUCT_NO = #{productNo}
+		</select>
+
+    <!-- 평점 조회 유상 -->
+    <select id="selectRating" parameterType="_int" resultType="_double">
+    	SELECT AVG(RATING)
+		 FROM REVIEW R
+		 JOIN ORDER_PRODUCT OP ON (R.ORDER_PRODUCT_NO = OP.ORDER_PRODUCT_NO)
+		WHERE OP.PRODUCT_NO = #{productNo} AND R.REVIEW_STATUS ='Y'
+    </select>
+	
+	<!-- 장바구니 넣기전 상품 중복검사 해준 -->
+	<select id="ajaxInsertCart" parameterType="map" resultMap="productResultSet">
+			SELECT PRODUCT_NO
+			  FROM CART
+			  JOIN PRODUCT USING (PRODUCT_NO)
+			 WHERE PRODUCT_NO = #{productNo}
+			   AND USER_NO = #{userNo}
+	</select>
+	<!-- 설문조사 하고 상품중복검사 해준 -->
+	<select id="countProductInCart" resultType="int" parameterType="map">
+    SELECT COUNT(*)
+    FROM CART
+    WHERE PRODUCT_NO = #{productNo} AND USER_NO = #{userNo}
+	</select>
+	
+	<!-- 메인페이지 좋아요 TOP9 제품 조회용 쿼리문 - 해준 -->
+      <select id="selectBestProduct" resultMap="productResultSet">
+		SELECT *
+		FROM ( SELECT P.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH, COUNT(W.USER_NO) AS WISH_COUNT,P.PRICE
+			     FROM WISHLIST W
+			     JOIN PRODUCT P ON W.PRODUCT_NO = P.PRODUCT_NO
+			    GROUP BY P.PRODUCT_NO, P.PRODUCT_NAME, P.PRODUCT_THUMBNAIL_PATH,P.PRICE
+			    ORDER BY WISH_COUNT DESC)
+	     WHERE ROWNUM &lt;= 9
+	</select>
+	
+	<!-- *********** 정민 : 관리자 ********* -->
+	<!-- 영양제 총 개수 쿼리문 -->
+	<select id="selectAdProductListCount" resultType="_int" parameterType="string">
+		 SELECT COUNT(*)
+	    FROM (
+	        SELECT DISTINCT PRODUCT_NO
+	            , PRODUCT_NAME
+	            , PRODUCT_THUMBNAIL_PATH
+	            , CATEGORY
+	            , PRICE
+	            , PRODUCT_STOCK
+	            , PRODUCT_COUNT
+	            , PRODUCT_STATUS
+	        FROM PRODUCT
+	        <if test="keyword != null and keyword != ''">
+	            JOIN PRODUCT_EFFECT PE USING (PRODUCT_NO)
+	            JOIN EFFECT E ON (E.EFFECT_NO = PE.EFFECT_NO) 
+	            WHERE PRODUCT_NAME LIKE '%' || #{keyword} || '%' 
+	               OR CATEGORY LIKE '%' || #{keyword} || '%' 
+	               OR E.EFFECT_NAME LIKE '%' || #{keyword} || '%'
+	        </if>
+	    ) DISTINCT_PRODUCTS
+	</select>
+	
+	<!-- 영양제 목록조회용 쿼리문 -->
+	<select id="selectAdProductList" parameterType="string" resultMap="productResultSet">
+		SELECT DISTINCT PRODUCT_NO
+	         , PRODUCT_NAME
+	         , PRODUCT_THUMBNAIL_PATH
+	         , CATEGORY
+	         , PRICE
+	         , PRODUCT_STOCK
+	         , PRODUCT_COUNT
+	         , PRODUCT_STATUS
+		  FROM PRODUCT
+		  <if test="keyword != null and keyword != ''">
+		  	JOIN PRODUCT_EFFECT PE USING (PRODUCT_NO)
+		  	JOIN EFFECT E ON (E.EFFECT_NO = PE.EFFECT_NO) 
+          	WHERE PRODUCT_NAME LIKE '%' || #{keyword} || '%' OR CATEGORY LIKE '%' || #{keyword} || '%' OR E.EFFECT_NAME LIKE '%' || #{keyword} || '%'
+          </if>
+		 ORDER BY PRODUCT_NO DESC
+	</select>
+	
+	<!-- 영양제 상세조회용 쿼리문 -->
+	<select id="selectAdProduct" parameterType="_int" resultMap="productResultSet">
+		SELECT PRODUCT_NO
+	         , PRODUCT_NAME
+	         , PRODUCT_THUMBNAIL_PATH
+	         , PRODUCT_DETAIL_PATH
+	         , CATEGORY
+	         , PRICE
+	         , PRODUCT_STOCK
+	         , PRODUCT_COUNT
+	         , PRODUCT_STATUS
+		  FROM PRODUCT
+		 WHERE PRODUCT_NO = #{productNo}
+	</select>
+	
+	<!-- 영양제 효능 조회용 쿼리문 -->
+	<select id="selectAdEffect" parameterType="_int" resultMap="effectResultSet">
+		SELECT *
+		  FROM PRODUCT_EFFECT
+		  JOIN EFFECT USING (EFFECT_NO)
+		 WHERE PRODUCT_NO = #{productNo}
+	</select>
+	
+	<!-- 영양제 부작용 조회용 쿼리문 -->
+	<select id="selectAdSideEffect" parameterType="_int" resultMap="effectResultSet">
+		SELECT *
+		  FROM SIDE_EFFECT
+		  JOIN EFFECT USING (EFFECT_NO)
+		 WHERE PRODUCT_NO = #{productNo}
+	</select>
+	
+	<!-- 영양제 등록용 쿼리문 -->
+	<insert id="insertAdProduct" parameterType="product">
+		INSERT INTO PRODUCT (PRODUCT_NO
+                           , PRODUCT_NAME
+                           , PRODUCT_STOCK
+                           , PRICE
+                           , CATEGORY
+                           , PRODUCT_THUMBNAIL_PATH
+                           , PRODUCT_DETAIL_PATH)
+			         VALUES (SEQ_PRODUCT_NO.NEXTVAL
+		                   , #{productName}
+		                   , #{productStock}
+		                   , #{price}
+		                   , #{category}
+		                   , #{productThumbnailPath}
+		                   , #{productDetailPath})
+	</insert>
+	
+	<!-- 영양제 상품번호 조회용 쿼리문 -->
+	<select id="selectAdProductNo" resultType="_int">
+		SELECT *
+		  FROM (
+		        SELECT PRODUCT_NO
+		          FROM PRODUCT
+		         ORDER BY PRODUCT_NO DESC 
+		        ) 
+		 WHERE ROWNUM =1
+	</select>
+	
+	<!-- 영양제 효과 등록용 쿼리문 -->
+	<insert id="insertAdEffect" parameterType="map">
+		INSERT INTO PRODUCT_EFFECT (PRODUCT_NO
+							      , EFFECT_NO)
+	                        VALUES (#{productNo}
+	                    	      , #{itemEffect}) 
+		</insert>
+	
+	
+	<!-- 영양제  부작용 등록용 쿼리문 -->
+	<insert id="insertAdSideEffect" parameterType="map">
+		INSERT INTO SIDE_EFFECT (PRODUCT_NO
+							   , EFFECT_NO)
+                         VALUES (#{productNo}
+                        	   , #{itemSideEffect}) 
+	</insert>
+	
+	<!-- 영양제 삭제용 쿼리문 -->
+	<update id="deleteAdProduct" parameterType="_int">
+		UPDATE PRODUCT
+	       SET PRODUCT_STATUS = 'N'
+	     WHERE PRODUCT_NO = #{productNo}
+	       AND PRODUCT_STATUS = 'Y'
+	</update>
+	
+	<!-- 영양제 복구용 쿼리문 -->
+	<update id="recoverAdProduct" parameterType="_int">
+		UPDATE PRODUCT
+	       SET PRODUCT_STATUS = 'Y'
+	     WHERE PRODUCT_NO = #{productNo}
+	       AND PRODUCT_STATUS = 'N'
+	</update>
+	
+	<!-- 영양제 수정용 쿼리문 -->
+	<update id="updateAdProduct" parameterType="product">
+		UPDATE PRODUCT
+	       SET PRODUCT_NAME = #{productName}
+	         , PRODUCT_STOCK = #{productStock}
+	         , PRICE = #{price}
+	         , CATEGORY = #{category}
+	         , PRODUCT_THUMBNAIL_PATH = #{productThumbnailPath}
+	         , PRODUCT_DETAIL_PATH = #{productDetailPath}
+		 WHERE PRODUCT_NO = #{productNo}
+		   AND PRODUCT_STATUS = 'Y'
+	</update>
+	
+	<!-- 효과 삭제용 쿼리문 -->
+	<delete id="deleteAdEffect" parameterType="_int">
+		 DELETE
+           FROM PRODUCT_EFFECT
+           WHERE PRODUCT_NO = #{productNo} 
+	</delete>
+	
+	<!-- 부작용 삭제용 쿼리문 -->
+	<delete id="deleteAdSideEffect" parameterType="_int">
+		 DELETE
+           FROM SIDE_EFFECT
+          WHERE PRODUCT_NO = #{productNo}
+	</delete>
+	
+	<!-- 카테고비별 재고 순위 조회 -->
+	<select id="selectAdStockRank" resultType="hashmap">
+		SELECT CATEGORY, PRODUCT_NAME, PRODUCT_STOCK, ROW_NUM
+		 FROM (SELECT CATEGORY, 
+			          PRODUCT_NAME, 
+			          PRODUCT_STOCK,
+			          ROW_NUMBER() OVER (PARTITION BY CATEGORY ORDER BY PRODUCT_STOCK ASC) AS ROW_NUM
+		    	 FROM PRODUCT) 
+		WHERE row_num &lt;= 5
+		ORDER BY CATEGORY, ROW_NUM
+	</select>
+	<!-- *********** 정민 : 관리자 ********* -->
+	
+	
+
+
+
+	
+	
+	
+</mapper>

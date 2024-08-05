@@ -1,0 +1,384 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd" >
+<mapper namespace="orderMapper">
+	
+	<resultMap id="orderResultSet" type="order">
+		<result column="ORDER_NO" property="orderNo"/>
+		<result column="PAY_CODE" property="payCode"/>
+		<result column="ORDER_PRICE" property="orderPrice"/>
+		<result column="ORDER_REQUEST" property="orderRequest"/>
+		<result column="ORDER_DATE" property="orderDate"/>
+		<result column="ORDER_CANCLE" property="orderCancle"/>
+		<result column="DELIVERY_STATUS" property="deliveryStatus"/>
+		<result column="ORDER_PHONE" property="orderPhone"/>
+		<result column="ORDER_ADDRESS" property="orderAddress"/>
+		<result column="ORDER_ZIPCODE" property="orderZipcode"/>
+		<result column="CART_NO" property="cartNo"/>
+		<result column="CART_QUANTITY" property="cartQuantity"/>
+		<result column="CART_PRICE" property="cartPrice"/>
+		<result column="USER_NO" property="userNo"/>
+		<result column="PRODUCT_NO" property="productNo"/>
+		<result column="EFFECT_NAME" property="effectName"/>
+		<result column="PRODUCT_THUMBNAIL_PATH" property="productThumbnailPath"/>
+		<result column="PRODUCT_NAME" property="productName"/>
+		<result column="USER_ID" property="userId" />
+		<result column="USER_NAME" property="userName" />
+		<result column="PHONE" property="phone" />
+		<result column="EMAIL" property="email" />
+		<result column="DELIVERY_NO" property="deliveryNo" />
+		<result column="DELIVERY_NAME" property="deliveryName" />
+		<result column="DELIVERY_ADDRESS" property="deliveryAddress" />
+		<result column="DELIVERY_ZIPCODE" property="deliveryZipcode" />
+		<result column="CATEGORY" property="category" />
+		<!-- 주문상품 조회용 - 정민 -->
+		<result column="ORDER_PRODUCT_NO" property="orderProductNo" />
+		<result column="ORDER_QUANTITY" property="orderQuantity" />
+		<result column="ORDER_PRODUCT_PRICE" property="orderProductPrice" />
+		<!-- 환불 조회용 - 정민 -->
+		<result column="ORDER_CONTENT" property="orderContent" />
+	</resultMap>
+	
+	<!-- 결제하기 장바구니 넘기기 -->
+	<select id="cartOrder" resultMap="orderResultSet" parameterType="map">
+    SELECT CART_NO, CART_QUANTITY, CART_PRICE, USER_NO, PRODUCT_NO, CATEGORY, PRODUCT_THUMBNAIL_PATH, PRODUCT_NAME,
+           USER_NAME, PHONE, EMAIL
+    FROM CART
+    JOIN PRODUCT USING (PRODUCT_NO)
+    JOIN MEMBER USING (USER_NO)
+    WHERE CART_NO IN 
+    <foreach item="cartNo" collection="cartNosList" open="(" separator="," close=")">
+        #{cartNo}
+    </foreach>
+    AND USER_NO = #{userNo}
+</select>
+	
+	<!-- 배송지 정보 가져오기 -->
+	<select id="getDeliveryList" resultMap="orderResultSet">
+    SELECT DELIVERY_NO, DELIVERY_NAME, DELIVERY_ADDRESS, DELIVERY_ZIPCODE, USER_ID
+    FROM DELIVERY
+    WHERE USER_ID = #{userId}
+</select>
+	<!-- ajax주문정보 넣기 -->
+	<insert id="orderInsert" parameterType="order">
+    INSERT INTO "ORDER" (ORDER_NO, PAY_CODE, ORDER_PRICE, ORDER_REQUEST, ORDER_PHONE, ORDER_ADDRESS, ORDER_ZIPCODE, USER_NO)
+    VALUES (#{orderNo}, #{payCode}, #{orderPrice}, #{orderRequest}, #{orderPhone}, #{orderAddress}, #{orderZipcode}, #{userNo})
+</insert>
+	<!-- ajax 상세정보 넣기 -->
+	<insert id="orderItemInsert" parameterType="order">
+    INSERT INTO ORDER_PRODUCT (
+        ORDER_PRODUCT_NO, 
+        ORDER_QUANTITY, 
+        ORDER_PRODUCT_PRICE, 
+        ORDER_NO, 
+        PRODUCT_NO
+    ) VALUES (
+        SEQ_ORDER_PRODUCT_NO.NEXTVAL, 
+        #{cartQuantity}, 
+        #{cartQuantity} * #{cartPrice},  
+        #{orderNo}, 
+        #{productNo}
+    )
+    </insert>
+    <!-- 결제후 상품재고 깍이게하기 -->
+    <update id="updateProductQuantity">
+        UPDATE PRODUCT
+        SET PRODUCT_STOCK = PRODUCT_STOCK - #{cartQuantity}
+        WHERE PRODUCT_NO = #{productNo}
+    </update>
+    
+    <!-- *********** 정민 : 관리자 ********* -->
+    <!-- 주문 총개수 조회용 쿼리문 -->
+	<select id="selectAdOrderListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+	</select>
+	
+	<!-- 주문 목록 조회용 쿼리문 -->
+	<select id="selectAdOrderList" resultMap="orderResultSet">
+		SELECT ORDER_NO
+	         , ORDER_PRICE
+	         , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+	         , USER_NO
+	         , USER_ID
+	         , ORDER_CONTENT
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+		 ORDER BY ORDER_NO DESC
+	</select>
+	
+	<!-- 주문 상세 조회용 쿼리문 -->
+	<select id="selectAdOrder" parameterType="string" resultMap="orderResultSet">
+		SELECT ORDER_NO
+             , PAY_CODE
+	         , ORDER_PRICE
+             , ORDER_REQUEST
+             , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD (DY) HH24:MI:SS') AS "ORDER_DATE"
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+             , ORDER_PHONE
+             , ORDER_ADDRESS
+             , ORDER_ZIPCODE
+	         , USER_NO
+	         , USER_ID
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+         WHERE ORDER_NO = #{orderNo}
+	</select>
+	
+	<!-- 주문 상품 상세조회용 쿼리문 -->
+	<select id="selectAdOrderProduct" parameterType="string" resultMap="orderResultSet">
+		SELECT ORDER_PRODUCT_NO
+			 , ORDER_QUANTITY
+			 , ORDER_PRODUCT_PRICE
+			 , ORDER_NO
+			 , PRODUCT_NAME
+			 , PRODUCT_NO
+			 , PRODUCT_THUMBNAIL_PATH
+		  FROM ORDER_PRODUCT
+		  JOIN PRODUCT USING (PRODUCT_NO)
+         WHERE ORDER_NO = #{orderNo}
+	</select>
+	
+	<!-- 배송 상태 수정용 쿼리문 -->
+	<update id="updateAdDelivery" parameterType="order">
+		UPDATE "ORDER"
+		   SET DELIVERY_STATUS = #{deliveryStatus}
+		 WHERE ORDER_NO = #{orderNo}
+	</update>
+	
+	<!-- 환불 총개수 조회용 쿼리문 -->
+	<select id="selectAdRefundListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+		  WHERE ORDER_CONTENT IS NOT NULL 
+	</select>
+	
+	<!-- 환불 목록 조회용 쿼리문 -->
+	<select id="selectAdRefundList" resultMap="orderResultSet">
+		SELECT ORDER_NO
+	         , ORDER_PRICE
+	         , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+	         , USER_NO
+	         , USER_ID
+	         , ORDER_CONTENT
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+		 WHERE ORDER_CONTENT IS NOT NULL 
+		 ORDER BY ORDER_NO DESC
+	</select>
+	
+	<!-- 환불 상세 조회용 쿼리문 -->
+	<select id="selectAdRefund" parameterType="string" resultMap="orderResultSet">
+		SELECT ORDER_NO
+             , PAY_CODE
+	         , ORDER_PRICE
+             , ORDER_REQUEST
+             , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD (DY) HH24:MI:SS') AS "ORDER_DATE"
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+             , ORDER_PHONE
+             , ORDER_ADDRESS
+             , ORDER_ZIPCODE
+	         , USER_NO
+	         , USER_ID
+	         , ORDER_CONTENT
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+         WHERE ORDER_NO = #{orderNo}
+           AND ORDER_CONTENT IS NOT NULL
+	</select>
+	
+	<!-- 환불 상태 수정용 쿼리문 -->
+	<update id="refundAdOrder" parameterType="string">
+		UPDATE "ORDER"
+		   SET ORDER_CANCLE = 'N'
+		 WHERE ORDER_NO = #{orderNo}
+		   AND ORDER_CANCLE = 'Y'
+		   AND ORDER_CONTENT IS NOT NULL
+	</update>
+	
+	<!-- 환불한 주문 상품 상태 수정용 쿼리문 -->
+	<update id="updateAdOrderProductStatus" parameterType="list">
+		 UPDATE REVIEW
+		    SET REVIEW_STATUS = 'N'
+		  WHERE ORDER_PRODUCT_NO IN
+		    <foreach item="orderProductNo" collection="array" open="(" separator="," close=")">
+		        #{orderProductNo}
+		    </foreach>
+	</update>
+	
+	<!-- 결제완료 총개수 조회용 쿼리문 -->
+	<select id="selectAdPayOrderListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+		 WHERE DELIVERY_STATUS = '결제완료'
+	</select>
+	
+	<!-- 배송준비중 총개수 조회용 쿼리문 -->
+	<select id="selectAdPrepareOrderListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+		 WHERE DELIVERY_STATUS = '배송준비중'
+	</select>
+	
+	<!-- 배송중 총개수 조회용 쿼리문 -->
+	<select id="selectAdDeliverOrderListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+		 WHERE DELIVERY_STATUS = '배송중'
+	</select>
+	
+	<!-- 배송완료 총개수 조회용 쿼리문 -->
+	<select id="selectAdCompleteOrderListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+		 WHERE DELIVERY_STATUS = '배송완료'
+	</select>
+	
+	<!-- 결제완료 목록 조회용 쿼리문 -->
+	<select id="selectAdPayOrderList" resultMap="orderResultSet">
+		SELECT ORDER_NO
+	         , ORDER_PRICE
+	         , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+	         , USER_NO
+	         , USER_ID
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+		  WHERE DELIVERY_STATUS = '결제완료'
+		 ORDER BY ORDER_NO DESC
+	</select>
+	
+	<!-- 배송준비중 목록 조회용 쿼리문 -->
+	<select id="selectAdPrepareOrderList" resultMap="orderResultSet">
+		SELECT ORDER_NO
+	         , ORDER_PRICE
+	         , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+	         , USER_NO
+	         , USER_ID
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+		  WHERE DELIVERY_STATUS = '배송준비중'
+		 ORDER BY ORDER_NO DESC
+	</select>
+	
+	<!-- 배송중 목록 조회용 쿼리문 -->
+	<select id="selectAdDeliverOrderList" resultMap="orderResultSet">
+		SELECT ORDER_NO
+	         , ORDER_PRICE
+	         , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+	         , USER_NO
+	         , USER_ID
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+		  WHERE DELIVERY_STATUS = '배송중'
+		 ORDER BY ORDER_NO DESC
+	</select>
+	
+	<!-- 배송완료 목록 조회용 쿼리문 -->
+	<select id="selectAdCompleteOrderList" resultMap="orderResultSet">
+		SELECT ORDER_NO
+	         , ORDER_PRICE
+	         , TO_CHAR(ORDER_DATE, 'YYYY-MM-DD') AS ORDER_DATE
+	         , ORDER_CANCLE
+	         , DELIVERY_STATUS
+	         , USER_NO
+	         , USER_ID
+		  FROM "ORDER"
+		  JOIN MEMBER USING (USER_NO)
+		  WHERE DELIVERY_STATUS = '배송완료'
+		 ORDER BY ORDER_NO DESC
+	</select>
+	
+	<!-- 결제완료 -> 배송준비중 -->
+	<update id="changeAdPayStatus" parameterType="list">
+		UPDATE "ORDER"
+		   SET DELIVERY_STATUS = '배송준비중'
+		 WHERE ORDER_NO IN
+		    <foreach item="orderNo" collection="array" open="(" separator="," close=")">
+		        #{orderNo}
+		    </foreach>
+	</update>
+	
+	<!-- 배송준비중 -> 배송중 -->
+	<update id="changeAdPrepareStatus" parameterType="list">
+		UPDATE "ORDER"
+		   SET DELIVERY_STATUS = '배송중'
+		 WHERE ORDER_NO IN
+		    <foreach item="orderNo" collection="array" open="(" separator="," close=")">
+		        #{orderNo}
+		    </foreach>
+	</update>
+	
+	<!-- 배송중 -> 배송완료 -->
+	<update id="changeAdDeliverStatus" parameterType="list">
+		UPDATE "ORDER"
+		   SET DELIVERY_STATUS = '배송완료'
+		 WHERE ORDER_NO IN
+		    <foreach item="orderNo" collection="array" open="(" separator="," close=")">
+		        #{orderNo}
+		    </foreach>
+	</update>
+	
+	<!-- 미처리 환불 건 수 조회 -->
+	<select id="selectAdIncompleteRefundCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM "ORDER"
+		  WHERE ORDER_CONTENT IS NOT NULL
+		    AND ORDER_CANCLE = 'Y'
+	</select>
+	
+	<!-- 배송상태 별 건수 조회 -->
+	<select id="selectAdDeliveryCount" resultType="hashmap">
+		SELECT PS.DELIVERY_STATUS
+			 , COALESCE(COUNT(o.DELIVERY_STATUS), 0) AS STATUS_COUNT
+		FROM ( SELECT '결제완료' AS DELIVERY_STATUS FROM dual
+		       UNION ALL
+		       SELECT '배송준비중' FROM dual
+		       UNION ALL
+		       SELECT '배송중' FROM dual
+		       UNION ALL
+		       SELECT '배송완료' FROM dual
+		     ) PS
+		LEFT JOIN "ORDER" O ON PS.DELIVERY_STATUS = O.DELIVERY_STATUS
+		GROUP BY PS.DELIVERY_STATUS
+		ORDER BY PS.DELIVERY_STATUS
+	</select>
+	
+	<!-- 현재 월의 매출액 조회 -->
+	<select id="selectAdSales" parameterType="map" resultType="_int">
+		SELECT SUM(ORDER_PRODUCT_PRICE)
+		  FROM ORDER_PRODUCT
+		  JOIN "ORDER" USING (ORDER_NO)
+		 WHERE #{year} = TO_NUMBER(TO_CHAR(ORDER_DATE, 'YYYY')) 
+		   AND #{month} = TO_NUMBER(TO_CHAR(ORDER_DATE, 'MM'))
+	</select>
+	
+	<!-- 환불한 주문 상품 재고 수정용 쿼리문 -->
+	<update id="updateAdStock" parameterType="map">
+		 UPDATE PRODUCT
+		    SET PRODUCT_STOCK = PRODUCT_STOCK + #{orderQuantity}
+		  WHERE PRODUCT_NO = #{productNo}
+	</update>
+	
+	<!-- 6개월간 매출액 조회 -->
+	<select id="selectAdTotalSales" resultType="hashmap">
+		SELECT TO_CHAR(ORDER_DATE, 'YYYY-MM') AS MONTH
+             , SUM(ORDER_PRODUCT_PRICE)AS TOTAL_SALES
+		  FROM "ORDER"
+		  JOIN ORDER_PRODUCT USING (ORDER_NO)
+		 WHERE ORDER_DATE >= ADD_MONTHS(SYSDATE, -6)
+		 GROUP BY TO_CHAR(ORDER_DATE, 'YYYY-MM')
+		 ORDER BY MONTH
+	</select>
+    <!-- *********** 정민 : 관리자 ********* -->
+</mapper>

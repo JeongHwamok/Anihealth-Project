@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+
+<mapper namespace="reviewMapper">
+
+	<!-- 더미데이터 넣고 꼭 커밋합시다 -->
+
+	<resultMap id="reviewResultSet"
+			   type="review">
+		<result column="REVIEW_NO" property="reviewNo" />
+		<result column="RATING" property="rating" />
+		<result column="REVIEW_TITLE" property="reviewTitle" />
+		<result column="REVIEW_CONTENT" property="reviewContent" />
+		<result column="REVIEW_FILE_PATH" property="reviewFilePath" />
+		<result column="REVIEW_DATE" property="reviewDate" />
+		<result column="REVIEW_STATUS" property="reviewStatus" />
+		<result column="ORDER_PRODUCT_NO" property="orderProductNo" />
+		<result column="USER_NO" property="userNo" />
+		<result column="PRODUCT_NO" property="productNo" />
+		<result column="COUNT" property="count"/>
+		<result column="PRODUCT_NAME" property="productName"/>
+		<!-- 관리자 리뷰 조회 - 정민 -->
+		<result column="USER_NICK" property="userNick" />
+	</resultMap>
+	<!-- 별점별 개수 -->
+	<select id="selectRatingCount" parameterType="_int" resultMap="reviewResultSet"> 
+		SELECT RATING, COUNT(RATING) "COUNT"
+		  FROM REVIEW R
+		  JOIN ORDER_PRODUCT O ON (R.ORDER_PRODUCT_NO = O.ORDER_PRODUCT_NO)
+		 WHERE PRODUCT_NO = #{productNo} AND REVIEW_STATUS = 'Y'
+		 GROUP BY RATING 
+		 ORDER BY RATING DESC
+	</select>
+	
+	<!-- 주문상품별 개수 -->
+	<select id="selectReviewCount" parameterType="_int"  resultType="_int"> 
+		SELECT COUNT(*)
+		  FROM REVIEW 
+		  WHERE ORDER_PRODUCT_NO = #{orderProductNo} AND REVIEW_STATUS = 'Y'
+	</select>
+	
+	<!-- 안씀 -->
+	<select id="selectCountReview" parameterType="review" resultType="_int">
+		SELECT COUNT(*)
+		  FROM REVIEW R
+		  JOIN ORDER_PRODUCT O ON (R.ORDER_PRODUCT_NO = O.ORDER_PRODUCT_NO)
+		 WHERE PRODUCT_NO = #{productNo} AND (RATING = #{rating} OR #{rating} = 0) AND REVIEW_STATUS = 'Y' 
+	</select>
+	<!-- 상품별 리뷰 리스트 조회 -->
+	<select id="selectProductReview" parameterType="review" resultMap="reviewResultSet">
+		SELECT REVIEW_NO, RATING, REVIEW_TITLE, REVIEW_CONTENT, REVIEW_FILE_PATH, R.USER_NO, TO_CHAR(REVIEW_DATE, 'YY/MM/DD HH:MI:SS') "REVIEW_DATE", USER_NICK
+		  FROM REVIEW R
+		  JOIN ORDER_PRODUCT O ON (R.ORDER_PRODUCT_NO = O.ORDER_PRODUCT_NO)
+		  JOIN MEMBER M ON (M.USER_NO = R.USER_NO)
+		 WHERE PRODUCT_NO = #{productNo} AND (RATING = #{rating} OR #{rating} = 0) AND REVIEW_STATUS = 'Y' 
+		 ORDER BY REVIEW_NO DESC
+	</select>
+
+	<!-- 리뷰작성 -->
+	<insert id="insertReview" parameterType="review">
+		INSERT INTO REVIEW(REVIEW_NO
+	            , RATING
+	            , REVIEW_TITLE
+	            , REVIEW_CONTENT
+	            , REVIEW_FILE_PATH
+	            , ORDER_PRODUCT_NO
+	            , USER_NO)
+	      VALUES (SEQ_REVIEW_NO.NEXTVAL
+         		, #{rating}
+                , #{reviewTitle}
+                , #{reviewContent}
+                , #{reviewFilePath}
+                , #{orderProductNo}
+                , #{userNo})     
+	</insert>
+	<!-- 리뷰하나 조회 -->
+	<select id="selectReview" parameterType="_int" resultMap="reviewResultSet">
+		SELECT REVIEW_NO, RATING, REVIEW_TITLE, REVIEW_CONTENT, REVIEW_FILE_PATH, REVIEW_DATE
+		  FROM REVIEW
+	     WHERE REVIEW_STATUS = 'Y' AND REVIEW_NO = #{reviewNo}
+	</select>
+	
+	
+	<update id="updateReview" parameterType="review">
+		UPDATE REVIEW
+		   SET RATING = #{rating}
+		     , REVIEW_TITLE = #{reviewTitle}
+		     , REVIEW_CONTENT = #{reviewContent}
+		     , REVIEW_FILE_PATH = #{reviewFilePath}
+		 WHERE REVIEW_NO = #{reviewNo} AND REVIEW_STATUS = 'Y'
+	</update>
+	
+	<update id="deleteReview" parameterType="_int">
+		UPDATE REVIEW
+		   SET REVIEW_STATUS = 'N'
+		 WHERE REVIEW_NO = #{reviewNo} AND REVIEW_STATUS = 'Y'
+	</update>
+	
+	<!-- 메인페이지 리뷰 조회 -->
+	<select id="selectMainReview" resultMap="reviewResultSet">
+		SELECT ROWNUM, R.*
+		FROM(
+		    SELECT P.PRODUCT_NAME as "PRODUCT_NAME", P.PRODUCT_NO, REVIEW_NO, RATING, REVIEW_TITLE, REVIEW_CONTENT, REVIEW_FILE_PATH
+		    FROM REVIEW R
+		    JOIN ORDER_PRODUCT OP ON R.ORDER_PRODUCT_NO = OP.ORDER_PRODUCT_NO
+		    JOIN "ORDER" O ON OP.ORDER_NO = O.ORDER_NO
+		    JOIN PRODUCT P ON P.PRODUCT_NO = OP.PRODUCT_NO
+		    WHERE O.ORDER_CANCLE = 'Y' AND R.REVIEW_STATUS = 'Y'
+		    ORDER BY R.REVIEW_NO DESC) R 
+		WHERE ROWNUM BETWEEN 1 AND 4 
+	</select>
+	
+	
+	<!-- ******** 정민 : 관리자 ********** -->
+	<select id="selectAdReviewListCount" resultType="_int">
+		SELECT COUNT(*)
+		  FROM REVIEW
+	</select>
+	
+	<select id="selectAdReviewList" resultMap="reviewResultSet">
+		SELECT REVIEW_NO
+	         , RATING
+	         , REVIEW_TITLE
+	         , REVIEW_CONTENT
+	         , REVIEW_FILE_PATH
+	         , TO_CHAR(REVIEW_DATE, 'YY/MM/DD HH:MI:SS') "REVIEW_DATE"
+	         , REVIEW_STATUS
+	         , ORDER_PRODUCT_NO
+	         , USER_NO
+	         , USER_NICK
+             , PRODUCT_NAME
+		  FROM REVIEW
+		  JOIN MEMBER USING (USER_NO)
+          JOIN ORDER_PRODUCT USING (ORDER_PRODUCT_NO)
+          JOIN PRODUCT  USING (PRODUCT_NO)
+		  ORDER BY REVIEW_NO DESC    
+	</select>
+	
+	<!-- 리뷰 삭제 -->
+	<update id="deleteAdReview" parameterType="_int">
+		UPDATE REVIEW
+		   SET REVIEW_STATUS = 'N'
+		 WHERE REVIEW_NO = #{reviewNo}
+		   AND REVIEW_STATUS = 'Y'
+	</update>
+	
+	<!-- 리뷰 복구 -->
+	<update id="recoverAdReview" parameterType="_int">
+		UPDATE REVIEW
+		   SET REVIEW_STATUS = 'Y'
+		 WHERE REVIEW_NO = #{reviewNo}
+		   AND REVIEW_STATUS = 'N'
+	</update>
+	
+	<!-- 대시보드 리뷰 총 개수 조회용 쿼리문 -->
+	<select id="selectAdReviewCount" resultMap="reviewResultSet">
+		SELECT  RATING, COUNT(*) AS COUNT
+		   FROM REVIEW
+	   GROUP BY RATING
+	   ORDER BY RATING DESC
+	</select>
+	<!-- ******** 정민 : 관리자 ********** -->
+  
+</mapper>
